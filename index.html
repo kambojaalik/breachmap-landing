@@ -1,0 +1,2139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="BreachMap AI — An AI-powered cybersecurity project exploring interactive attack-path visualization, security risk explanations, and defensive remediation guidance. Early stage in development.">
+  <meta name="theme-color" content="#060913">
+  <title>BreachMap AI — See Your Breach Before It Happens</title>
+  
+  <!-- Google Fonts Preconnect & Stylesheet -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    /* ==========================================================================
+       CSS RESET & DESIGN TOKENS
+       ========================================================================== */
+    :root {
+      --bg-primary: #060913;
+      --bg-secondary: #0a0f1d;
+      --bg-tertiary: #10172c;
+      --bg-card: rgba(13, 22, 44, 0.65);
+      --bg-card-hover: rgba(18, 30, 60, 0.85);
+      
+      --border-subtle: rgba(56, 189, 248, 0.12);
+      --border-focus: rgba(0, 242, 254, 0.45);
+      --border-card: rgba(255, 255, 255, 0.08);
+
+      --cyan-bright: #00f2fe;
+      --cyan-glow: rgba(0, 242, 254, 0.35);
+      --blue-accent: #38bdf8;
+      --blue-deep: #1e40af;
+      --indigo-glow: rgba(99, 102, 241, 0.25);
+      
+      --threat-red: #ff3366;
+      --threat-glow: rgba(255, 51, 102, 0.4);
+      --warning-amber: #f59e0b;
+      --warning-glow: rgba(245, 158, 11, 0.35);
+      --success-emerald: #10b981;
+      
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --text-cyan: #38bdf8;
+
+      --font-main: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+      --radius-sm: 6px;
+      --radius-md: 12px;
+      --radius-lg: 18px;
+      --radius-full: 9999px;
+
+      --transition-fast: 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      --transition-smooth: 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: var(--font-main);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    body {
+      min-height: 100vh;
+      line-height: 1.6;
+      overflow-x: hidden;
+      background-color: var(--bg-primary);
+      background-image: 
+        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(14, 116, 144, 0.25), transparent),
+        radial-gradient(circle 600px at 85% 25%, rgba(56, 189, 248, 0.08), transparent),
+        radial-gradient(circle 500px at 15% 65%, rgba(99, 102, 241, 0.08), transparent);
+    }
+
+    /* Subdued Cyber Grid Overlay */
+    .cyber-grid {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      background-size: 50px 50px;
+      background-image: 
+        linear-gradient(to right, rgba(255, 255, 255, 0.018) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.018) 1px, transparent 1px);
+      mask-image: radial-gradient(circle at 50% 40%, black 40%, transparent 85%);
+      -webkit-mask-image: radial-gradient(circle at 50% 40%, black 40%, transparent 85%);
+    }
+
+    /* ==========================================================================
+       CONTAINERS & COMMON UTILITIES
+       ========================================================================== */
+    .container {
+      width: 100%;
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 0 1.5rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    .section {
+      padding: 6.5rem 0;
+      position: relative;
+    }
+
+    @media (max-width: 768px) {
+      .section {
+        padding: 4rem 0;
+      }
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.35rem 0.85rem;
+      border-radius: var(--radius-full);
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-family: var(--font-mono);
+      background: rgba(14, 116, 144, 0.15);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      color: var(--cyan-bright);
+    }
+
+    .status-badge {
+      background: rgba(245, 158, 11, 0.1);
+      border: 1px solid rgba(245, 158, 11, 0.4);
+      color: #fbbf24;
+      box-shadow: 0 0 15px rgba(245, 158, 11, 0.15);
+    }
+
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: currentColor;
+      box-shadow: 0 0 10px currentColor;
+      animation: pulse-ring 2s infinite ease-in-out;
+    }
+
+    @keyframes pulse-ring {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.3); opacity: 0.6; }
+    }
+
+    .section-header {
+      text-align: center;
+      max-width: 780px;
+      margin: 0 auto 3.5rem;
+    }
+
+    .section-eyebrow {
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      color: var(--cyan-bright);
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      margin-bottom: 0.75rem;
+      display: block;
+    }
+
+    .section-title {
+      font-size: clamp(1.85rem, 3.5vw, 2.75rem);
+      font-weight: 800;
+      letter-spacing: -0.025em;
+      line-height: 1.2;
+      color: var(--text-primary);
+      margin-bottom: 1.2rem;
+    }
+
+    .section-subtitle {
+      color: var(--text-secondary);
+      font-size: 1.05rem;
+      line-height: 1.7;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.6rem;
+      font-family: var(--font-main);
+      font-weight: 600;
+      font-size: 0.92rem;
+      padding: 0.75rem 1.4rem;
+      border-radius: var(--radius-sm);
+      text-decoration: none;
+      transition: all var(--transition-fast);
+      cursor: pointer;
+      border: 1px solid transparent;
+      outline: none;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+      color: #ffffff;
+      box-shadow: 0 0 20px rgba(14, 165, 233, 0.35);
+      border-color: rgba(255, 255, 255, 0.15);
+    }
+
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #38bdf8 0%, #0369a1 100%);
+      box-shadow: 0 0 28px rgba(56, 189, 248, 0.55);
+      transform: translateY(-2px);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.04);
+      border-color: var(--border-subtle);
+      color: var(--text-primary);
+      backdrop-filter: blur(8px);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(56, 189, 248, 0.08);
+      border-color: rgba(56, 189, 248, 0.4);
+      color: var(--cyan-bright);
+      transform: translateY(-2px);
+    }
+
+    /* ==========================================================================
+       HEADER & NAVIGATION
+       ========================================================================== */
+    .site-header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(6, 9, 19, 0.85);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--border-card);
+      transition: background var(--transition-smooth);
+    }
+
+    .nav-wrapper {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 4.5rem;
+    }
+
+    .brand-logo {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      text-decoration: none;
+      color: var(--text-primary);
+      font-weight: 800;
+      font-size: 1.25rem;
+      letter-spacing: -0.02em;
+    }
+
+    .logo-symbol {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, rgba(0, 242, 254, 0.2), rgba(30, 64, 175, 0.3));
+      border: 1px solid rgba(0, 242, 254, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 15px rgba(0, 242, 254, 0.25);
+    }
+
+    .brand-text span {
+      color: var(--cyan-bright);
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: 1.05rem;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 2rem;
+      list-style: none;
+    }
+
+    .nav-link {
+      text-decoration: none;
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: color var(--transition-fast);
+      position: relative;
+    }
+
+    .nav-link:hover {
+      color: var(--cyan-bright);
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+    }
+
+    .mobile-menu-btn {
+      display: none;
+      background: none;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      padding: 0.5rem;
+      cursor: pointer;
+    }
+
+    @media (max-width: 900px) {
+      .nav-links {
+        display: none;
+        position: absolute;
+        top: 4.5rem;
+        left: 0;
+        right: 0;
+        background: rgba(8, 12, 24, 0.98);
+        flex-direction: column;
+        padding: 1.75rem 2rem;
+        border-bottom: 1px solid var(--border-subtle);
+        gap: 1.25rem;
+        align-items: flex-start;
+      }
+      .nav-links.active {
+        display: flex;
+      }
+      .mobile-menu-btn {
+        display: block;
+      }
+    }
+
+    /* ==========================================================================
+       HERO SECTION
+       ========================================================================== */
+    .hero-section {
+      padding: 5rem 0 4rem;
+      text-align: center;
+      position: relative;
+    }
+
+    .hero-status-wrap {
+      display: inline-flex;
+      margin-bottom: 2rem;
+      animation: fadeInDown 0.8s ease-out;
+    }
+
+    .hero-headline {
+      font-size: clamp(2.4rem, 5.5vw, 4.2rem);
+      font-weight: 800;
+      line-height: 1.12;
+      letter-spacing: -0.035em;
+      max-width: 950px;
+      margin: 0 auto 1.5rem;
+      background: linear-gradient(180deg, #ffffff 30%, #94a3b8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero-description {
+      font-size: clamp(1.05rem, 2vw, 1.3rem);
+      color: var(--text-secondary);
+      max-width: 780px;
+      margin: 0 auto 2.5rem;
+      line-height: 1.65;
+      font-weight: 400;
+    }
+
+    .hero-buttons {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-bottom: 3.5rem;
+    }
+
+    .hero-stats-bar {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
+      max-width: 920px;
+      margin: 0 auto;
+      padding: 1.5rem 2rem;
+      background: rgba(13, 22, 44, 0.45);
+      border: 1px solid var(--border-card);
+      border-radius: var(--radius-md);
+      backdrop-filter: blur(10px);
+    }
+
+    .hero-stat-item {
+      text-align: left;
+      border-left: 2px solid var(--border-subtle);
+      padding-left: 1.25rem;
+    }
+
+    .hero-stat-label {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 0.25rem;
+    }
+
+    .hero-stat-value {
+      font-size: 0.98rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    @media (max-width: 768px) {
+      .hero-stats-bar {
+        grid-template-columns: 1fr;
+        gap: 1.25rem;
+        text-align: left;
+      }
+    }
+
+    /* ==========================================================================
+       SVG INTERACTIVE NETWORK VISUALIZER SECTION
+       ========================================================================== */
+    .visualizer-card {
+      background: rgba(10, 15, 29, 0.9);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), 0 0 30px rgba(56, 189, 248, 0.08);
+      overflow: hidden;
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      position: relative;
+    }
+
+    @media (max-width: 1024px) {
+      .visualizer-card {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .canvas-panel {
+      position: relative;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      background: radial-gradient(circle at 50% 50%, rgba(14, 116, 144, 0.08) 0%, transparent 80%), #070b16;
+      border-right: 1px solid var(--border-card);
+      min-height: 480px;
+    }
+
+    @media (max-width: 1024px) {
+      .canvas-panel {
+        border-right: none;
+        border-bottom: 1px solid var(--border-card);
+      }
+    }
+
+    .canvas-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+      z-index: 10;
+    }
+
+    .canvas-title-group {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .canvas-title {
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .graph-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .ctrl-btn {
+      font-family: var(--font-mono);
+      font-size: 0.76rem;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-card);
+      color: var(--text-secondary);
+      padding: 0.35rem 0.75rem;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      transition: all var(--transition-fast);
+    }
+
+    .ctrl-btn:hover, .ctrl-btn.active {
+      background: rgba(56, 189, 248, 0.15);
+      border-color: rgba(56, 189, 248, 0.45);
+      color: var(--cyan-bright);
+    }
+
+    .ctrl-btn.attack {
+      background: rgba(255, 51, 102, 0.1);
+      border-color: rgba(255, 51, 102, 0.3);
+      color: #ff6b8b;
+    }
+
+    .ctrl-btn.attack:hover, .ctrl-btn.attack.active {
+      background: rgba(255, 51, 102, 0.22);
+      border-color: var(--threat-red);
+      color: #ffffff;
+      box-shadow: 0 0 15px rgba(255, 51, 102, 0.4);
+    }
+
+    .svg-wrapper {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      min-height: 400px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #attackGraphSvg {
+      width: 100%;
+      height: auto;
+      max-height: 480px;
+      overflow: visible;
+    }
+
+    /* SVG Node & Link Styles */
+    .edge-line {
+      stroke: rgba(56, 189, 248, 0.18);
+      stroke-width: 1.5;
+      stroke-dasharray: 4 4;
+      transition: all 0.4s ease;
+    }
+
+    .edge-threat {
+      stroke: var(--threat-red);
+      stroke-width: 2.5;
+      stroke-dasharray: 8 6;
+      animation: threatFlow 1.8s linear infinite;
+      filter: drop-shadow(0 0 6px var(--threat-red));
+    }
+
+    .edge-defense-blocked {
+      stroke: var(--success-emerald);
+      stroke-width: 2.5;
+      stroke-dasharray: 4 4;
+      animation: threatFlow 2s linear reverse infinite;
+      filter: drop-shadow(0 0 6px var(--success-emerald));
+    }
+
+    @keyframes threatFlow {
+      from { stroke-dashoffset: 28; }
+      to { stroke-dashoffset: 0; }
+    }
+
+    .node-group {
+      cursor: pointer;
+      transition: transform 0.25s ease;
+    }
+
+    .node-group:hover {
+      filter: drop-shadow(0 0 12px var(--cyan-bright));
+    }
+
+    .node-group.selected circle.node-core {
+      stroke: var(--cyan-bright);
+      stroke-width: 3.5;
+      filter: drop-shadow(0 0 14px var(--cyan-bright));
+    }
+
+    .node-group.threat-active circle.node-core {
+      stroke: var(--threat-red);
+      stroke-width: 3;
+      filter: drop-shadow(0 0 14px var(--threat-red));
+    }
+
+    .pulse-ring {
+      animation: radarPulse 3s cubic-bezier(0.2, 0.8, 0.2, 1) infinite;
+      transform-origin: center;
+    }
+
+    @keyframes radarPulse {
+      0% { r: 18; opacity: 0.8; }
+      100% { r: 36; opacity: 0; }
+    }
+
+    /* Inspector Sidebar */
+    .inspector-panel {
+      padding: 1.75rem 1.5rem;
+      background: rgba(13, 20, 38, 0.95);
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .inspector-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border-card);
+      padding-bottom: 0.85rem;
+    }
+
+    .inspector-tag {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      color: var(--cyan-bright);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .node-name {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 0.35rem;
+    }
+
+    .node-type-badge {
+      display: inline-block;
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      padding: 0.2rem 0.55rem;
+      border-radius: var(--radius-sm);
+      background: rgba(56, 189, 248, 0.15);
+      color: var(--blue-accent);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      font-weight: 600;
+    }
+
+    .telemetry-row {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      background: rgba(6, 9, 19, 0.6);
+      padding: 0.85rem;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-card);
+    }
+
+    .telemetry-label {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+
+    .telemetry-value {
+      font-size: 0.88rem;
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+
+    .risk-meter {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      margin-top: 0.25rem;
+    }
+
+    .risk-bar {
+      flex: 1;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .risk-fill {
+      height: 100%;
+      border-radius: 3px;
+      background: var(--threat-red);
+      transition: width 0.4s ease;
+    }
+
+    .ai-remediation-box {
+      margin-top: auto;
+      background: linear-gradient(135deg, rgba(14, 116, 144, 0.15), rgba(99, 102, 241, 0.12));
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      border-radius: var(--radius-sm);
+      padding: 1rem;
+    }
+
+    .ai-box-title {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--cyan-bright);
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      margin-bottom: 0.5rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .ai-box-text {
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+      line-height: 1.55;
+    }
+
+    /* ==========================================================================
+       THREE PLANNED CAPABILITIES SECTION
+       ========================================================================== */
+    .capabilities-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.75rem;
+    }
+
+    @media (max-width: 992px) {
+      .capabilities-grid {
+        grid-template-columns: 1fr;
+        max-width: 600px;
+        margin: 0 auto;
+      }
+    }
+
+    .cap-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: var(--radius-lg);
+      padding: 2.25rem 2rem;
+      position: relative;
+      overflow: hidden;
+      transition: all var(--transition-smooth);
+      backdrop-filter: blur(12px);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .cap-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, rgba(56, 189, 248, 0.4), transparent);
+      opacity: 0;
+      transition: opacity var(--transition-smooth);
+    }
+
+    .cap-card:hover {
+      background: var(--bg-card-hover);
+      border-color: rgba(56, 189, 248, 0.3);
+      transform: translateY(-5px);
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4), 0 0 25px rgba(56, 189, 248, 0.12);
+    }
+
+    .cap-card:hover::before {
+      opacity: 1;
+    }
+
+    .cap-icon-box {
+      width: 52px;
+      height: 52px;
+      border-radius: var(--radius-md);
+      background: linear-gradient(135deg, rgba(14, 116, 144, 0.25), rgba(6, 9, 19, 0.8));
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 1.5rem;
+      color: var(--cyan-bright);
+      box-shadow: 0 0 18px rgba(0, 242, 254, 0.15);
+    }
+
+    .cap-title {
+      font-size: 1.32rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 0.85rem;
+      line-height: 1.3;
+    }
+
+    .cap-desc {
+      color: var(--text-secondary);
+      font-size: 0.94rem;
+      line-height: 1.65;
+      margin-bottom: 1.5rem;
+      flex: 1;
+    }
+
+    .cap-points {
+      list-style: none;
+      border-top: 1px solid var(--border-card);
+      padding-top: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+    }
+
+    .cap-points li {
+      font-size: 0.84rem;
+      color: var(--text-muted);
+      display: flex;
+      align-items: flex-start;
+      gap: 0.6rem;
+    }
+
+    .cap-points li svg {
+      flex-shrink: 0;
+      color: var(--cyan-bright);
+      margin-top: 2px;
+    }
+
+    /* ==========================================================================
+       OUR VISION SECTION
+       ========================================================================== */
+    .vision-layout {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 3.5rem;
+      align-items: center;
+    }
+
+    @media (max-width: 992px) {
+      .vision-layout {
+        grid-template-columns: 1fr;
+        gap: 2.5rem;
+      }
+    }
+
+    .vision-narrative h3 {
+      font-size: 1.85rem;
+      font-weight: 700;
+      line-height: 1.3;
+      margin-bottom: 1.25rem;
+      color: var(--text-primary);
+    }
+
+    .vision-narrative p {
+      color: var(--text-secondary);
+      font-size: 1.02rem;
+      line-height: 1.7;
+      margin-bottom: 1.25rem;
+    }
+
+    .comparison-card {
+      background: rgba(10, 15, 29, 0.85);
+      border: 1px solid var(--border-card);
+      border-radius: var(--radius-lg);
+      padding: 2rem;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      backdrop-filter: blur(10px);
+    }
+
+    .cmp-block {
+      padding: 1.25rem;
+      border-radius: var(--radius-md);
+      position: relative;
+    }
+
+    .cmp-block.traditional {
+      background: rgba(255, 51, 102, 0.05);
+      border: 1px solid rgba(255, 51, 102, 0.2);
+    }
+
+    .cmp-block.breachmap {
+      background: rgba(0, 242, 254, 0.05);
+      border: 1px solid rgba(0, 242, 254, 0.25);
+    }
+
+    .cmp-label {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 700;
+      margin-bottom: 0.4rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .cmp-block.traditional .cmp-label { color: #ff6b8b; }
+    .cmp-block.breachmap .cmp-label { color: var(--cyan-bright); }
+
+    .cmp-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin-bottom: 0.35rem;
+      color: var(--text-primary);
+    }
+
+    .cmp-desc {
+      font-size: 0.86rem;
+      color: var(--text-secondary);
+      line-height: 1.55;
+    }
+
+    /* ==========================================================================
+       RESEARCH & DEVELOPMENT ROADMAP (CONCEPT PHASE)
+       ========================================================================== */
+    .roadmap-strip {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+      margin-top: 2rem;
+    }
+
+    @media (max-width: 900px) {
+      .roadmap-strip {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .roadmap-node {
+      background: rgba(13, 22, 44, 0.5);
+      border: 1px solid var(--border-card);
+      border-radius: var(--radius-md);
+      padding: 1.25rem;
+      position: relative;
+    }
+
+    .roadmap-node.current {
+      border-color: rgba(56, 189, 248, 0.4);
+      background: rgba(14, 116, 144, 0.12);
+    }
+
+    .roadmap-phase {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--cyan-bright);
+      text-transform: uppercase;
+      margin-bottom: 0.4rem;
+    }
+
+    .roadmap-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+      color: var(--text-primary);
+    }
+
+    .roadmap-desc {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      line-height: 1.45;
+    }
+
+    /* ==========================================================================
+       AUTHENTIC INQUIRY / CONTACT SECTION
+       ========================================================================== */
+    .inquiry-card {
+      background: linear-gradient(180deg, rgba(14, 22, 44, 0.75) 0%, rgba(8, 12, 24, 0.95) 100%);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 3.5rem 2.5rem;
+      text-align: center;
+      max-width: 780px;
+      margin: 0 auto;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    }
+
+    .inquiry-title {
+      font-size: 1.85rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      color: var(--text-primary);
+    }
+
+    .inquiry-text {
+      color: var(--text-secondary);
+      font-size: 1rem;
+      line-height: 1.65;
+      max-width: 580px;
+      margin: 0 auto 2rem;
+    }
+
+    .contact-box {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.75rem;
+      background: rgba(6, 9, 19, 0.85);
+      border: 1px solid var(--border-card);
+      padding: 0.6rem 1.25rem;
+      border-radius: var(--radius-sm);
+      font-family: var(--font-mono);
+      font-size: 0.86rem;
+      color: var(--text-primary);
+    }
+
+    .copy-email-btn {
+      background: none;
+      border: none;
+      color: var(--cyan-bright);
+      cursor: pointer;
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      text-decoration: underline;
+      padding: 0;
+      transition: color var(--transition-fast);
+    }
+
+    .copy-email-btn:hover {
+      color: #ffffff;
+    }
+
+    /* ==========================================================================
+       FOOTER
+       ========================================================================== */
+    .site-footer {
+      border-top: 1px solid var(--border-card);
+      background: #04060c;
+      padding: 4rem 0 2.5rem;
+      color: var(--text-muted);
+      position: relative;
+      z-index: 10;
+    }
+
+    .footer-top {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr;
+      gap: 3rem;
+      margin-bottom: 3.5rem;
+    }
+
+    @media (max-width: 768px) {
+      .footer-top {
+        grid-template-columns: 1fr;
+        gap: 2rem;
+      }
+    }
+
+    .footer-brand h4 {
+      color: var(--text-primary);
+      font-size: 1.15rem;
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .footer-brand p {
+      font-size: 0.88rem;
+      line-height: 1.6;
+      max-width: 440px;
+      color: var(--text-secondary);
+    }
+
+    .footer-col-title {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-primary);
+      margin-bottom: 1rem;
+    }
+
+    .footer-links {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+    }
+
+    .footer-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.86rem;
+      transition: color var(--transition-fast);
+    }
+
+    .footer-links a:hover {
+      color: var(--cyan-bright);
+    }
+
+    .footer-disclaimer-box {
+      background: rgba(245, 158, 11, 0.05);
+      border: 1px solid rgba(245, 158, 11, 0.2);
+      border-radius: var(--radius-sm);
+      padding: 1.25rem;
+      margin-bottom: 2.5rem;
+      font-size: 0.82rem;
+      line-height: 1.6;
+      color: #d1d5db;
+    }
+
+    .footer-disclaimer-box strong {
+      color: #fbbf24;
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-size: 0.75rem;
+      display: inline-block;
+      margin-right: 0.5rem;
+    }
+
+    .footer-bottom {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      padding-top: 1.75rem;
+      font-size: 0.8rem;
+    }
+
+    @media (max-width: 600px) {
+      .footer-bottom {
+        flex-direction: column;
+        gap: 0.75rem;
+        text-align: center;
+      }
+    }
+
+    /* Keyframe Animations */
+    @keyframes fadeInDown {
+      from { opacity: 0; transform: translateY(-15px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Accessibility focus indicator */
+    a:focus-visible, button:focus-visible {
+      outline: 2px solid var(--cyan-bright);
+      outline-offset: 3px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Ambient Cyber Grid Background -->
+  <div class="cyber-grid" aria-hidden="true"></div>
+
+  <!-- ==========================================================================
+       SITE HEADER / NAVIGATION
+       ========================================================================== -->
+  <header class="site-header">
+    <div class="container nav-wrapper">
+      <a href="#hero" class="brand-logo" aria-label="BreachMap AI Homepage">
+        <div class="logo-symbol" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="12 2 2 7 12 12 22 7 12 2" stroke="#00f2fe"></polygon>
+            <polyline points="2 17 12 22 22 17" stroke="#38bdf8"></polyline>
+            <polyline points="2 12 12 17 22 12" stroke="#818cf8"></polyline>
+          </svg>
+        </div>
+        <span class="brand-text">BreachMap <span>AI</span></span>
+      </a>
+
+      <nav aria-label="Main Navigation">
+        <ul class="nav-links" id="navLinks">
+          <li><a href="#visualizer" class="nav-link">Interactive Map</a></li>
+          <li><a href="#capabilities" class="nav-link">Capabilities</a></li>
+          <li><a href="#vision" class="nav-link">Our Vision</a></li>
+          <li><a href="#roadmap" class="nav-link">Roadmap</a></li>
+          <li><a href="#contact" class="nav-link">Contact</a></li>
+        </ul>
+      </nav>
+
+      <div class="nav-actions">
+        <span class="badge status-badge" title="Project Status">
+          <span class="pulse-dot" aria-hidden="true"></span>
+          EARLY STAGE
+        </span>
+        <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Toggle navigation menu" aria-expanded="false">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- ==========================================================================
+         HERO SECTION
+         ========================================================================== -->
+    <section class="section hero-section" id="hero">
+      <div class="container">
+        
+        <div class="hero-status-wrap">
+          <div class="badge status-badge">
+            <span class="pulse-dot" aria-hidden="true"></span>
+            EARLY STAGE — IN DEVELOPMENT
+          </div>
+        </div>
+
+        <h1 class="hero-headline">
+          See Your Breach Before It Happens.
+        </h1>
+
+        <p class="hero-description">
+          An AI-powered cybersecurity project exploring interactive attack-path visualization, 
+          security risk explanations, and defensive remediation guidance.
+        </p>
+
+        <div class="hero-buttons">
+          <a href="#visualizer" class="btn btn-primary" id="exploreVisualizerBtn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+            Explore Prototype Visualizer
+          </a>
+          <a href="#vision" class="btn btn-secondary">
+            Read Our Vision
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M5 12h14M12 5l7 7-7 7"></path>
+            </svg>
+          </a>
+        </div>
+
+        <!-- Research Highlights Bar -->
+        <div class="hero-stats-bar">
+          <div class="hero-stat-item">
+            <div class="hero-stat-label">Core Philosophy</div>
+            <div class="hero-stat-value">Graph Topological Reasoning</div>
+          </div>
+          <div class="hero-stat-item">
+            <div class="hero-stat-label">Analysis Model</div>
+            <div class="hero-stat-value">Explainable Causal Risk Chains</div>
+          </div>
+          <div class="hero-stat-item">
+            <div class="hero-stat-label">Strategic Objective</div>
+            <div class="hero-stat-value">Choke-Point Remediation</div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ==========================================================================
+         INTERACTIVE SVG ATTACK PATH NETWORK SECTION
+         ========================================================================== -->
+    <section class="section" id="visualizer">
+      <div class="container">
+        
+        <div class="section-header">
+          <span class="section-eyebrow">Interactive Concept Preview</span>
+          <h2 class="section-title">Hypothetical Attack Path Modeling</h2>
+          <p class="section-subtitle">
+            Attackers do not think in isolated checklists; they navigate connective graphs. 
+            Click any node below or simulate an attack trajectory to inspect multi-hop risk propagation.
+          </p>
+        </div>
+
+        <div class="visualizer-card">
+          
+          <!-- Graph Canvas Panel -->
+          <div class="canvas-panel">
+            <div class="canvas-toolbar">
+              <div class="canvas-title-group">
+                <span class="pulse-dot" style="background:#00f2fe; box-shadow:0 0 8px #00f2fe;" aria-hidden="true"></span>
+                <span class="canvas-title">Topological Infrastructure Map</span>
+              </div>
+              
+              <div class="graph-controls">
+                <button class="ctrl-btn attack" id="toggleAttackTraceBtn" title="Simulate multi-hop threat progression">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                  </svg>
+                  <span>Simulate Attack Path</span>
+                </button>
+                <button class="ctrl-btn" id="toggleDefenseChokeBtn" title="Show remediation choke point">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                  </svg>
+                  <span>Highlight Choke Point</span>
+                </button>
+                <button class="ctrl-btn" id="resetGraphBtn" title="Reset diagram view">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                    <path d="M3 3v5h5"></path>
+                  </svg>
+                  <span>Reset</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Custom Vector SVG Network Canvas -->
+            <div class="svg-wrapper">
+              <svg id="attackGraphSvg" viewBox="0 0 880 440" preserveAspectRatio="xMidYMid meet" aria-label="Network topological diagram demonstrating hypothetical breach paths">
+                <defs>
+                  <!-- Glow Filters -->
+                  <filter id="glowCyan" x="-20%" y="-20%" width="140%" height="140%">
+                    <feGaussianBlur stdDeviation="4" result="blur" />
+                    <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                  </filter>
+                  <filter id="glowRed" x="-30%" y="-30%" width="160%" height="160%">
+                    <feGaussianBlur stdDeviation="5" result="blur" />
+                    <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                  </filter>
+
+                  <!-- Gradients -->
+                  <linearGradient id="gradThreat" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#ff3366" />
+                    <stop offset="100%" stop-color="#fbbf24" />
+                  </linearGradient>
+                  <linearGradient id="gradShield" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#38bdf8" />
+                    <stop offset="100%" stop-color="#1e40af" />
+                  </linearGradient>
+                  <linearGradient id="gradTarget" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#ec4899" />
+                    <stop offset="100%" stop-color="#9333ea" />
+                  </linearGradient>
+                </defs>
+
+                <!-- Normal Structural Connections (Edges) -->
+                <g id="edgesBase">
+                  <!-- External to WAF -->
+                  <line x1="80" y1="220" x2="220" y2="130" class="edge-line" />
+                  <!-- External to API Gateway -->
+                  <line x1="80" y1="220" x2="230" y2="310" class="edge-line" id="edge-0" />
+                  <!-- WAF to SIEM -->
+                  <line x1="220" y1="130" x2="430" y2="90" class="edge-line" />
+                  <!-- API Gateway to Internal Auth -->
+                  <line x1="230" y1="310" x2="400" y2="220" class="edge-line" id="edge-1" />
+                  <!-- API Gateway to K8s Workload -->
+                  <line x1="230" y1="310" x2="440" y2="350" class="edge-line" id="edge-hop1" />
+                  <!-- K8s Workload to Redis Cache -->
+                  <line x1="440" y1="350" x2="630" y2="300" class="edge-line" id="edge-hop2" />
+                  <!-- Internal Auth to Customer DB -->
+                  <line x1="400" y1="220" x2="760" y2="190" class="edge-line" />
+                  <!-- Redis Cache to Customer DB -->
+                  <line x1="630" y1="300" x2="760" y2="190" class="edge-line" id="edge-hop3" />
+                  <!-- SIEM to Telemetry Store -->
+                  <line x1="430" y1="90" x2="680" y2="100" class="edge-line" />
+                  <!-- Telemetry Store to DB -->
+                  <line x1="680" y1="100" x2="760" y2="190" class="edge-line" />
+                  <!-- K8s Workload to Cold Storage Vault -->
+                  <line x1="440" y1="350" x2="740" y2="370" class="edge-line" />
+                </g>
+
+                <!-- Hypothetical Attack Vector Overlay Paths -->
+                <g id="edgesAttack">
+                  <!-- Hop 1: External Actor -> Vulnerable API Gateway -->
+                  <path id="pathAttack1" d="M 80 220 L 230 310" fill="none" stroke="transparent" />
+                  <!-- Hop 2: Vulnerable API Gateway -> K8s Overprivileged Service Account -->
+                  <path id="pathAttack2" d="M 230 310 L 440 350" fill="none" stroke="transparent" />
+                  <!-- Hop 3: K8s Pod -> Staging Redis Token Store -->
+                  <path id="pathAttack3" d="M 440 350 L 630 300" fill="none" stroke="transparent" />
+                  <!-- Hop 4: Staging Token Store -> Critical Production Database -->
+                  <path id="pathAttack4" d="M 630 300 L 760 190" fill="none" stroke="transparent" />
+                </g>
+
+                <!-- Defense Choke Point Indicator Marker -->
+                <g id="chokePointGroup" style="opacity: 0; transition: opacity 0.4s ease;">
+                  <circle cx="535" cy="325" r="24" fill="none" stroke="#10b981" stroke-width="2" stroke-dasharray="4 2" />
+                  <rect x="475" y="270" width="120" height="24" rx="4" fill="#064e3b" stroke="#10b981" stroke-width="1" />
+                  <text x="535" y="286" fill="#a7f3d0" font-family="'JetBrains Mono', monospace" font-size="10" font-weight="700" text-anchor="middle">KEY CHOKE POINT</text>
+                </g>
+
+                <!-- Nodes -->
+                <!-- 1. External Threat Actor -->
+                <g class="node-group selected" id="node-actor" transform="translate(80, 220)" data-id="actor" tabindex="0" role="button" aria-label="External Threat Actor Node">
+                  <circle class="pulse-ring" r="22" fill="none" stroke="#ff3366" opacity="0.4" />
+                  <circle class="node-core" r="18" fill="#1e1022" stroke="#ff3366" stroke-width="2" />
+                  <circle r="7" fill="#ff3366" />
+                  <text y="32" fill="#f8fafc" font-size="11" font-weight="600" text-anchor="middle">External Actor</text>
+                  <text y="45" fill="#f43f5e" font-family="'JetBrains Mono', monospace" font-size="9" text-anchor="middle">INGRESS</text>
+                </g>
+
+                <!-- 2. Edge CDN & WAF -->
+                <g class="node-group" id="node-waf" transform="translate(220, 130)" data-id="waf" tabindex="0" role="button" aria-label="Edge WAF & CDN Node">
+                  <circle class="node-core" r="18" fill="#0d1b33" stroke="#38bdf8" stroke-width="1.8" />
+                  <polygon points="0,-7 7,-1 4,7 -4,7 -7,-1" fill="#38bdf8" opacity="0.75" />
+                  <text y="30" fill="#f8fafc" font-size="11" font-weight="600" text-anchor="middle">Edge WAF / CDN</text>
+                  <text y="43" fill="#64748b" font-family="'JetBrains Mono', monospace" font-size="9" text-anchor="middle">SHIELDED</text>
+                </g>
+
+                <!-- 3. Public API Gateway (Vulnerable SSRF) -->
+                <g class="node-group" id="node-api" transform="translate(230, 310)" data-id="api" tabindex="0" role="button" aria-label="Public API Gateway Node">
+                  <circle class="node-core" r="20" fill="#201124" stroke="#fbbf24" stroke-width="2" />
+                  <circle r="6" fill="#fbbf24" />
+                  <text y="32" fill="#f8fafc" font-size="11" font-weight="600" text-anchor="middle">Public API Gateway</text>
+                  <text y="45" fill="#fbbf24" font-family="'JetBrains Mono', monospace" font-size="9" text-anchor="middle">CVE-2024-X (SSRF)</text>
+                </g>
+
+                <!-- 4. Security Telemetry SIEM -->
+                <g class="node-group" id="node-siem" transform="translate(430, 90)" data-id="siem" tabindex="0" role="button" aria-label="SIEM Telemetry Node">
+                  <circle class="node-core" r="16" fill="#0d1b33" stroke="#38bdf8" stroke-width="1.5" />
+                  <rect x="-6" y="-6" width="12" height="12" rx="2" fill="#38bdf8" opacity="0.7" />
+                  <text y="28" fill="#f8fafc" font-size="11" font-weight="600" text-anchor="middle">SIEM Telemetry</text>
+                  <text y="41" fill="#64748b" font-family="'JetBrains Mono', monospace" font-size="9" text-anchor="middle">MONITORING</text>
+                </g>
+
+                <!-- 5. Internal Auth Service -->
+                <g class="node-group" id="node-auth" transform="translate(400, 220)" data-id="auth" tabindex="0" role="button" aria-label="Internal Auth Service Node">
+                  <circle class="node-core" r="18" fill="#0d1b33" stroke="#38bdf8" stroke-width="1.8" />
+                  <circle r="6" fill="#38bdf8" opacity="0.6" />
+                  <text y="30" fill="#f8fafc" font-size="11" font-weight="600" text-anchor="middle">Internal Auth</text>
+                  <text y="43" fill="#64748b" font-family="'JetBrains Mono', monospace" font-size="9" text-anchor="middle">SERVICE</text>
+                </g>
+
+                <!-- 6. Overprivileged K8s Workload -->
+                <g class="node-group" id="node-k8s" transform="translate(440, 350)" data-id="k8s" tabindex="0" role="button" aria-label="Kubernetes Workload Node">
+                  <circle class="node-core" r="20" fill="#201124" stroke="#f59e0b" stroke-width="2" />
+                  <polygon points="0,-7 6,-3 6,5 0,8 -6,5 -6,-3" fill="#f59e0b" opacity="0.8" />
+                  <text y="32" fill="#f8fafc" font-size="11" font-weight="600" text-anchor="middle">K8s Ingress Pod</text>
+                  <text y="45" fill="#f59e0b" font-family="'JetBrains Mono', monospace" font-size="9" text-anchor="middle">IAM PRIVILEGED</text>
+                </g>
+
+                <!-- 7. Staging Redis Token Store -->
+                <g class="node-group" id="node-redis" transform="translate(630, 300)" data-id="redis" tabindex="0" role="button" aria-label="Staging Redis Token Store Node">
+                  <circle class="node-core" r="19" fill="#201124" stroke="#ff3366" stroke-width="2" />
+                  <rect x="-6" y="-6" width="12" height="12" rx="3" fill="#ff3366" opacity="0.75" />
+                  <text y="32" fill="#f8fafc" font-size="11" font-weight="600" text-anchor="middle">Redis Token Store</text>
+                  <text y="45" fill="#ff6b8b" font-family="'JetBrains Mono', monospace" font-size="9" text-anchor="middle">EXPOSED CREDS</text>
+                </g>
+
+                <!-- 8. Cloud Telemetry Store -->
+                <g class="node-group" id="node-cloud" transform="translate(680, 100)" data-id="cloud" tabindex="0" role="button" aria-label="Audit Log Node">
+                  <circle class="node-core" r="16" fill="#0d1b33" stroke="#38bdf8" stroke-width="1.5" />
+                  <circle r="5" fill="#38bdf8" opacity="0.5" />
+                  <text y="28" fill="#f8fafc" font-size="11" font-weight="600" text-anchor="middle">CloudTrail Audit</text>
+                  <text y="41" fill="#64748b" font-family="'JetBrains Mono', monospace" font-size="9" text-anchor="middle">LOG STREAM</text>
+                </g>
+
+                <!-- 9. Critical Production Database (Crown Jewel) -->
+                <g class="node-group" id="node-db" transform="translate(760, 190)" data-id="db" tabindex="0" role="button" aria-label="Critical Customer Database Node">
+                  <circle class="pulse-ring" r="26" fill="none" stroke="#ec4899" opacity="0.5" />
+                  <circle class="node-core" r="22" fill="#2a102e" stroke="#ec4899" stroke-width="2.5" />
+                  <circle r="8" fill="url(#gradTarget)" />
+                  <text y="36" fill="#f8fafc" font-size="11" font-weight="700" text-anchor="middle">Customer DB</text>
+                  <text y="50" fill="#ec4899" font-family="'JetBrains Mono', monospace" font-size="9" font-weight="700" text-anchor="middle">CROWN JEWEL</text>
+                </g>
+
+                <!-- 10. Cold Storage Vault -->
+                <g class="node-group" id="node-vault" transform="translate(740, 370)" data-id="vault" tabindex="0" role="button" aria-label="Cold Storage Vault Node">
+                  <circle class="node-core" r="17" fill="#0d1b33" stroke="#38bdf8" stroke-width="1.5" />
+                  <rect x="-6" y="-6" width="12" height="12" rx="2" fill="#38bdf8" opacity="0.6" />
+                  <text y="30" fill="#f8fafc" font-size="11" font-weight="600" text-anchor="middle">Cold Vault</text>
+                  <text y="43" fill="#64748b" font-family="'JetBrains Mono', monospace" font-size="9" text-anchor="middle">ENCRYPTED</text>
+                </g>
+              </svg>
+            </div>
+          </div>
+
+          <!-- Inspector Sidebar Panel -->
+          <aside class="inspector-panel" aria-live="polite">
+            <div class="inspector-header">
+              <span class="inspector-tag">Topology Inspector</span>
+              <span class="node-type-badge" id="inspCategory">EXTERNAL ACTOR</span>
+            </div>
+
+            <div>
+              <h3 class="node-name" id="inspName">External Threat Actor</h3>
+              <p style="font-size: 0.84rem; color: var(--text-secondary); line-height: 1.5;" id="inspSubtitle">
+                Unauthenticated internet perimeter reconnaissance originating from untrusted autonomous systems.
+              </p>
+            </div>
+
+            <div class="telemetry-row">
+              <span class="telemetry-label">Exposure & Vulnerability</span>
+              <span class="telemetry-value" id="inspVuln">Public endpoint probing / Port scanning</span>
+            </div>
+
+            <div class="telemetry-row">
+              <span class="telemetry-label">Blast Radius Potential</span>
+              <div class="risk-meter">
+                <div class="risk-bar">
+                  <div class="risk-fill" id="inspRiskBar" style="width: 85%;"></div>
+                </div>
+                <span class="telemetry-value" id="inspRiskText" style="font-family: var(--font-mono); font-size: 0.78rem;">HIGH RISK</span>
+              </div>
+            </div>
+
+            <div class="telemetry-row">
+              <span class="telemetry-label">Causal Attack Hop</span>
+              <span class="telemetry-value" id="inspHopLink" style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--cyan-bright);">
+                Initial Access &rarr; Public API Gateway
+              </span>
+            </div>
+
+            <div class="ai-remediation-box">
+              <div class="ai-box-title">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path>
+                </svg>
+                Planned AI Remediation
+              </div>
+              <p class="ai-box-text" id="inspGuidance">
+                Model attack path ingress vectors and apply rate-limiting boundaries, strict Geo-IP ingress policy, and external API signature verification.
+              </p>
+            </div>
+          </aside>
+
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ==========================================================================
+         THREE PLANNED CAPABILITIES SECTION
+         ========================================================================== -->
+    <section class="section" id="capabilities">
+      <div class="container">
+        
+        <div class="section-header">
+          <span class="section-eyebrow">Project Roadmap</span>
+          <h2 class="section-title">Three Planned Core Capabilities</h2>
+          <p class="section-subtitle">
+            BreachMap AI is designed around three foundational research pillars aimed at turning 
+            abstract security alerts into coherent, actionable topology models.
+          </p>
+        </div>
+
+        <div class="capabilities-grid">
+          
+          <!-- Capability 1 -->
+          <article class="cap-card">
+            <div class="cap-icon-box" aria-hidden="true">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="18" cy="5" r="3"></circle>
+                <circle cx="6" cy="12" r="3"></circle>
+                <circle cx="18" cy="19" r="3"></circle>
+                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+              </svg>
+            </div>
+            <h3 class="cap-title">Interactive Attack-Path Visualization</h3>
+            <p class="cap-desc">
+              Transforming fragmented cloud configs, network rules, and identity policies into 
+              navigable, multi-dimensional graph topologies that uncover lateral movement risks.
+            </p>
+            <ul class="cap-points">
+              <li>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span>Full graph representation of multi-hop attack paths</span>
+              </li>
+              <li>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span>Blast-radius modeling across identity and microservices</span>
+              </li>
+              <li>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span>Clear distinction between isolated and chained vulnerabilities</span>
+              </li>
+            </ul>
+          </article>
+
+          <!-- Capability 2 -->
+          <article class="cap-card">
+            <div class="cap-icon-box" aria-hidden="true">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                <line x1="12" y1="22.08" x2="12" y2="12"></line>
+              </svg>
+            </div>
+            <h3 class="cap-title">AI-Assisted Security Analysis</h3>
+            <p class="cap-desc">
+              Contextual AI reasoning that synthesizes technical vulnerability findings into plain-language 
+              causal explanations, cutting through alert fatigue and false positives.
+            </p>
+            <ul class="cap-points">
+              <li>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span>Translates cryptic CVE telemetry into narrative risk contexts</span>
+              </li>
+              <li>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span>Grounds threat analysis strictly in graph relationships</span>
+              </li>
+              <li>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span>Identifies compound threat combinations undetectable in isolation</span>
+              </li>
+            </ul>
+          </article>
+
+          <!-- Capability 3 -->
+          <article class="cap-card">
+            <div class="cap-icon-box" aria-hidden="true">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+              </svg>
+            </div>
+            <h3 class="cap-title">Risk Prioritization & Defensive Guidance</h3>
+            <p class="cap-desc">
+              Targeted remediation recommendations focused on strategic choke points—stopping attacks 
+              at the lowest operational cost before they reach critical crown-jewel data.
+            </p>
+            <ul class="cap-points">
+              <li>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span>Pinpoints minimal intervention points with maximum risk mitigation</span>
+              </li>
+              <li>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span>Step-by-step hardening recipes for cloud engineering teams</span>
+              </li>
+              <li>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span>Eliminates low-priority noise to focus defender bandwidth</span>
+              </li>
+            </ul>
+          </article>
+
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ==========================================================================
+         OUR VISION SECTION
+         ========================================================================== -->
+    <section class="section" id="vision" style="background: rgba(10, 15, 29, 0.4); border-top: 1px solid var(--border-card); border-bottom: 1px solid var(--border-card);">
+      <div class="container">
+        
+        <div class="vision-layout">
+          
+          <div class="vision-narrative">
+            <span class="section-eyebrow">Our Vision</span>
+            <h2 class="section-title" style="text-align: left;">
+              Making Complex Security Relationships Intuitive and Understandable.
+            </h2>
+            <p>
+              Modern enterprise architectures span across multiple cloud providers, hundreds of IAM permissions, 
+              ephemeral Kubernetes pods, and complex network configurations. The core problem facing security 
+              teams today is not a lack of data—it is a lack of <strong>coherent relational context</strong>.
+            </p>
+            <p>
+              Traditional scanners flood engineering teams with disconnected spreadsheets of CVE severities. 
+              However, real-world breaches rarely occur from an isolated high-scoring vulnerability; they succeed 
+              through an inconspicuous chain of minor misconfigurations and transitive permissions.
+            </p>
+            <p>
+              <strong>BreachMap AI</strong> is founded on the conviction that security should be visible, 
+              navigable, and intelligible. By marrying graph-theoretic topology with transparent language models, 
+              we aim to help teams visualize systemic risk long before it turns into an incident.
+            </p>
+          </div>
+
+          <!-- Comparison Card -->
+          <div class="comparison-card">
+            
+            <div class="cmp-block traditional">
+              <div class="cmp-label">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                The Traditional Approach
+              </div>
+              <h4 class="cmp-title">Disjointed Alert Lists &amp; Siloed Scanners</h4>
+              <p class="cmp-desc">
+                Hundreds of unranked vulnerability tickets with no structural context. Teams waste time patching 
+                isolated bugs on non-sensitive assets while subtle lateral movement paths remain unaddressed.
+              </p>
+            </div>
+
+            <div class="cmp-block breachmap">
+              <div class="cmp-label">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                The BreachMap AI Vision
+              </div>
+              <h4 class="cmp-title">Connected Topologies &amp; Explainable Choke Points</h4>
+              <p class="cmp-desc">
+                Interactive attack graph maps highlighting complete multi-hop chains. Clear identification of 
+                single remediation choke points that simultaneously break multiple threat pathways.
+              </p>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ==========================================================================
+         ROADMAP & RESEARCH METHODOLOGY SECTION
+         ========================================================================== -->
+    <section class="section" id="roadmap">
+      <div class="container">
+        
+        <div class="section-header">
+          <span class="section-eyebrow">Project Status</span>
+          <h2 class="section-title">Development Roadmap &amp; Principles</h2>
+          <p class="section-subtitle">
+            BreachMap AI is an early-stage exploration. We are building carefully, transparently, 
+            and with strict adherence to rigorous engineering discipline.
+          </p>
+        </div>
+
+        <div class="roadmap-strip">
+          <div class="roadmap-node current">
+            <div class="roadmap-phase">Phase 01 &bull; Active</div>
+            <h4 class="roadmap-title">Concept &amp; Modeling</h4>
+            <p class="roadmap-desc">
+              Formalizing cybersecurity graph data models, multi-hop relationship semantics, and interactive visualization prototypes.
+            </p>
+          </div>
+
+          <div class="roadmap-node">
+            <div class="roadmap-phase">Phase 02 &bull; Planned</div>
+            <h4 class="roadmap-title">Graph Engine Core</h4>
+            <p class="roadmap-desc">
+              Developing automated parsing of infrastructure topology, IAM graphs, and network egress rules.
+            </p>
+          </div>
+
+          <div class="roadmap-node">
+            <div class="roadmap-phase">Phase 03 &bull; Planned</div>
+            <h4 class="roadmap-title">AI Causal Reasoning</h4>
+            <p class="roadmap-desc">
+              Integrating grounded analysis models to generate deterministic, verifiable remediation advice without hallucinations.
+            </p>
+          </div>
+
+          <div class="roadmap-node">
+            <div class="roadmap-phase">Phase 04 &bull; Future</div>
+            <h4 class="roadmap-title">Prototype Validation</h4>
+            <p class="roadmap-desc">
+              Rigorous benchmarking on synthetic cloud testbeds and open cybersecurity research environments.
+            </p>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ==========================================================================
+         INQUIRY & GET IN TOUCH SECTION (AUTHENTIC / NO FABRICATED DATA)
+         ========================================================================== -->
+    <section class="section" id="contact">
+      <div class="container">
+        
+        <div class="inquiry-card">
+          <span class="badge" style="margin-bottom: 1.25rem;">Research Collaboration</span>
+          <h2 class="inquiry-title">Interested in the Project?</h2>
+          <p class="inquiry-text">
+            BreachMap AI is in its early formative stages. If you are a cybersecurity researcher, 
+            graph modeling enthusiast, or engineer interested in discussing attack path visualization concepts, 
+            we welcome thoughtful dialogue and inquiries.
+          </p>
+
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 1rem;">
+            <div class="contact-box">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                <polyline points="22,6 12,13 2,6"></polyline>
+              </svg>
+              <span id="contactEmail">contact@breachmap.ai</span>
+              <button class="copy-email-btn" id="copyEmailBtn" aria-label="Copy email address to clipboard">Copy</button>
+            </div>
+            <div id="copyFeedback" style="font-family: var(--font-mono); font-size: 0.78rem; color: var(--cyan-bright); height: 1.2rem;" aria-live="polite"></div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+  </main>
+
+  <!-- ==========================================================================
+       SITE FOOTER
+       ========================================================================== -->
+  <footer class="site-footer">
+    <div class="container">
+      
+      <!-- Development Disclaimer Box -->
+      <div class="footer-disclaimer-box">
+        <strong>Important Notice:</strong>
+        BreachMap AI is an early-stage cybersecurity research and development project. 
+        All capabilities, architectures, metrics, and visualization workflows presented on this website 
+        reflect planned design concepts and exploratory prototypes. They are actively under development 
+        and do not represent an operational software service, commercial guarantee, or certified cybersecurity product.
+      </div>
+
+      <div class="footer-top">
+        <div class="footer-brand">
+          <h4>
+            <span class="pulse-dot" style="background:#00f2fe; width:6px; height:6px;" aria-hidden="true"></span>
+            BreachMap AI
+          </h4>
+          <p>
+            Exploring interactive attack-path visualization, contextual risk explanations, 
+            and proactive defensive remediation guidance for modern infrastructure.
+          </p>
+        </div>
+
+        <div>
+          <h5 class="footer-col-title">Navigation</h5>
+          <ul class="footer-links">
+            <li><a href="#hero">Overview</a></li>
+            <li><a href="#visualizer">Topological Map</a></li>
+            <li><a href="#capabilities">Planned Capabilities</a></li>
+            <li><a href="#vision">Our Vision</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h5 class="footer-col-title">Project Details</h5>
+          <ul class="footer-links">
+            <li><a href="#roadmap">Development Roadmap</a></li>
+            <li><a href="#contact">Research Inquiries</a></li>
+            <li><span style="font-size: 0.82rem; color: #64748b; font-family: var(--font-mono);">Phase: Concept &amp; Prototype</span></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <div>
+          &copy; <span id="currentYear">2026</span> BreachMap AI Project. All rights reserved.
+        </div>
+        <div style="font-family: var(--font-mono); color: #64748b;">
+          Status: In Active Development &bull; Research Prototype
+        </div>
+      </div>
+
+    </div>
+  </footer>
+
+  <!-- ==========================================================================
+       LIGHTWEIGHT CLIENT-SIDE LOGIC (NO BUILD TOOLS / ZERO DEPENDENCIES)
+       ========================================================================== -->
+  <script>
+    (function () {
+      'use strict';
+
+      // Year auto-update
+      const yearEl = document.getElementById('currentYear');
+      if (yearEl) {
+        yearEl.textContent = new Date().getFullYear();
+      }
+
+      // Mobile Menu Toggle
+      const mobileBtn = document.getElementById('mobileMenuBtn');
+      const navLinks = document.getElementById('navLinks');
+      if (mobileBtn && navLinks) {
+        mobileBtn.addEventListener('click', function () {
+          const isOpen = navLinks.classList.toggle('active');
+          mobileBtn.setAttribute('aria-expanded', isOpen);
+        });
+        // Close menu on link click
+        navLinks.querySelectorAll('a').forEach(function (link) {
+          link.addEventListener('click', function () {
+            navLinks.classList.remove('active');
+            mobileBtn.setAttribute('aria-expanded', 'false');
+          });
+        });
+      }
+
+      // Copy Email functionality
+      const copyBtn = document.getElementById('copyEmailBtn');
+      const emailEl = document.getElementById('contactEmail');
+      const feedbackEl = document.getElementById('copyFeedback');
+
+      if (copyBtn && emailEl) {
+        copyBtn.addEventListener('click', function () {
+          const emailText = emailEl.textContent.trim();
+          navigator.clipboard.writeText(emailText).then(function () {
+            if (feedbackEl) {
+              feedbackEl.textContent = 'Email address copied to clipboard!';
+              setTimeout(function () {
+                feedbackEl.textContent = '';
+              }, 3000);
+            }
+          }).catch(function () {
+            // Fallback
+            window.location.href = 'mailto:' + emailText;
+          });
+        });
+      }
+
+      // ==========================================================================
+      // TOPOLOGY GRAPH DATA & INTERACTION
+      // ==========================================================================
+      const nodeTelemetryData = {
+        actor: {
+          category: 'EXTERNAL ACTOR',
+          name: 'External Threat Actor',
+          subtitle: 'Unauthenticated internet perimeter reconnaissance originating from untrusted autonomous systems.',
+          vuln: 'Port scanning / External endpoint fuzzing',
+          riskLevel: '80%',
+          riskText: 'ACTIVE INGRESS',
+          riskColor: '#ff3366',
+          hopLink: 'Initial Access \u2192 Public API Gateway',
+          guidance: 'Deploy automated egress anomaly detection, enforce strict rate-limiting, and block non-compliant TLS cipher suites.'
+        },
+        waf: {
+          category: 'DEFENSIVE SHIELD',
+          name: 'Edge WAF & CDN',
+          subtitle: 'Distributed perimeter filtering and layer 7 inspection shield.',
+          vuln: 'Bypass possible via specialized HTTP header smuggling or direct origin exposure',
+          riskLevel: '25%',
+          riskText: 'LOW EXPOSURE',
+          riskColor: '#38bdf8',
+          hopLink: 'Perimeter Inspection \u2192 Telemetry Sink',
+          guidance: 'Ensure strict origin lock-down so ingress cannot circumvent CDN proxies via direct IP access.'
+        },
+        api: {
+          category: 'ENTRY VULNERABILITY',
+          name: 'Public API Gateway',
+          subtitle: 'Public-facing reverse proxy routing incoming client requests to internal services.',
+          vuln: 'CVE-2024-X: Server-Side Request Forgery (SSRF) flaw in URL metadata ingestion',
+          riskLevel: '90%',
+          riskText: 'CRITICAL VULNERABILITY',
+          riskColor: '#ff3366',
+          hopLink: 'Public API Gateway \u2192 K8s Ingress Pod',
+          guidance: 'Enforce URL schema whitelisting, disable internal metadata service endpoints (IMDSv2), and isolate pod network.'
+        },
+        siem: {
+          category: 'DEFENSIVE TELEMETRY',
+          name: 'SIEM Telemetry Pipeline',
+          subtitle: 'Centralized log aggregation collecting firewall, audit, and proxy logs.',
+          vuln: 'High telemetry volume causing detection delay; lack of real-time graph correlation',
+          riskLevel: '35%',
+          riskText: 'MONITORED',
+          riskColor: '#38bdf8',
+          hopLink: 'Log Pipeline \u2192 CloudTrail Stream',
+          guidance: 'Integrate relational graph indexing to correlate isolated microservice events into cohesive attack tracks.'
+        },
+        auth: {
+          category: 'INTERNAL SERVICE',
+          name: 'Internal Auth Service',
+          subtitle: 'OAuth2/JWT issuing authority validating internal microservice identity.',
+          vuln: 'Weak token lifetime settings allowing replayed credential attacks if intercepted',
+          riskLevel: '50%',
+          riskText: 'MEDIUM RISK',
+          riskColor: '#f59e0b',
+          hopLink: 'Internal Mesh \u2192 Service Tokens',
+          guidance: 'Implement short-lived token lifetimes, strict mutual TLS (mTLS), and bounded token audiences.'
+        },
+        k8s: {
+          category: 'LATERAL PIVOT',
+          name: 'K8s Ingress Pod (Privileged)',
+          subtitle: 'Workload executing customer request parsing inside the production cluster.',
+          vuln: 'Mounted service account token with excessive cluster-role binding permissions',
+          riskLevel: '85%',
+          riskText: 'HIGH PIVOT RISK',
+          riskColor: '#ff3366',
+          hopLink: 'K8s Workload \u2192 Redis Token Store',
+          guidance: 'Strip automountServiceAccountToken from workload specs; implement Kubernetes NetworkPolicies to block lateral egress.'
+        },
+        redis: {
+          category: 'CREDENTIAL EXPOSURE',
+          name: 'Staging Redis Token Store',
+          subtitle: 'In-memory caching cluster holding temporary session credentials and API tokens.',
+          vuln: 'Unauthenticated internal access; predictable staging partition network route',
+          riskLevel: '95%',
+          riskText: 'CRITICAL COMPROMISE',
+          riskColor: '#ff3366',
+          hopLink: 'Redis Cache \u2192 Customer DB (Crown Jewel)',
+          guidance: 'Enforce TLS & AUTH on Redis, segment staging environment from production VPC, and rotate compromised secrets.'
+        },
+        cloud: {
+          category: 'AUDIT STREAM',
+          name: 'CloudTrail Audit Stream',
+          subtitle: 'Immutable API event logs recording management calls and identity assertions.',
+          vuln: 'Passive record; does not actively prevent lateral exfiltration in progress',
+          riskLevel: '20%',
+          riskText: 'AUDIT PASSIVE',
+          riskColor: '#10b981',
+          hopLink: 'Audit Stream \u2192 SIEM Analysis',
+          guidance: 'Enable automated graph alerts on anomalous IAM privilege escalation patterns.'
+        },
+        db: {
+          category: 'CROWN JEWEL ASSET',
+          name: 'Production Customer Database',
+          subtitle: 'Primary persistent repository storing sensitive enterprise customer data.',
+          vuln: 'Ultimate target for hypothetical multi-hop breach and data exfiltration',
+          riskLevel: '100%',
+          riskText: 'MAXIMUM SEVERITY',
+          riskColor: '#ff3366',
+          hopLink: 'Target Asset \u2192 Exfiltration Endpoint',
+          guidance: 'Enforce column-level envelope encryption, private link endpoints only, and zero-trust query authorization.'
+        },
+        vault: {
+          category: 'ENCRYPTED ARCHIVE',
+          name: 'Cold Backup Vault',
+          subtitle: 'Offline, air-gapped immutable backup storage with multi-party authorization.',
+          vuln: 'Protected; requires dual cryptographic quorum for access',
+          riskLevel: '10%',
+          riskText: 'SECURED',
+          riskColor: '#10b981',
+          hopLink: 'Isolated Asset',
+          guidance: 'Maintain air-gap separation and regular cryptographic key rotation routines.'
+        }
+      };
+
+      // Inspector DOM elements
+      const inspCategory = document.getElementById('inspCategory');
+      const inspName = document.getElementById('inspName');
+      const inspSubtitle = document.getElementById('inspSubtitle');
+      const inspVuln = document.getElementById('inspVuln');
+      const inspRiskBar = document.getElementById('inspRiskBar');
+      const inspRiskText = document.getElementById('inspRiskText');
+      const inspHopLink = document.getElementById('inspHopLink');
+      const inspGuidance = document.getElementById('inspGuidance');
+
+      function updateInspector(nodeId) {
+        const data = nodeTelemetryData[nodeId];
+        if (!data) return;
+
+        inspCategory.textContent = data.category;
+        inspName.textContent = data.name;
+        inspSubtitle.textContent = data.subtitle;
+        inspVuln.textContent = data.vuln;
+        inspRiskBar.style.width = data.riskLevel;
+        inspRiskBar.style.backgroundColor = data.riskColor;
+        inspRiskText.textContent = data.riskText;
+        inspRiskText.style.color = data.riskColor;
+        inspHopLink.textContent = data.hopLink;
+        inspGuidance.textContent = data.guidance;
+
+        // Highlight selected node group
+        document.querySelectorAll('.node-group').forEach(function (el) {
+          el.classList.remove('selected');
+        });
+        const selectedEl = document.getElementById('node-' + nodeId);
+        if (selectedEl) {
+          selectedEl.classList.add('selected');
+        }
+      }
+
+      // Add click & keyboard listeners to all nodes
+      document.querySelectorAll('.node-group').forEach(function (node) {
+        const id = node.getAttribute('data-id');
+        node.addEventListener('click', function () {
+          updateInspector(id);
+        });
+        node.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            updateInspector(id);
+          }
+        });
+      });
+
+      // Attack Simulation Logic
+      const toggleAttackBtn = document.getElementById('toggleAttackTraceBtn');
+      const toggleDefenseBtn = document.getElementById('toggleDefenseChokeBtn');
+      const resetBtn = document.getElementById('resetGraphBtn');
+      const chokeGroup = document.getElementById('chokePointGroup');
+
+      const attackPaths = [
+        document.getElementById('pathAttack1'),
+        document.getElementById('pathAttack2'),
+        document.getElementById('pathAttack3'),
+        document.getElementById('pathAttack4')
+      ];
+
+      const attackSequenceNodes = ['actor', 'api', 'k8s', 'redis', 'db'];
+      let attackInterval = null;
+      let isAttackActive = false;
+
+      function startAttackSimulation() {
+        if (isAttackActive) {
+          stopAttackSimulation();
+          return;
+        }
+
+        isAttackActive = true;
+        toggleAttackBtn.classList.add('active');
+        toggleAttackBtn.querySelector('span').textContent = 'Pause Attack Path';
+
+        // Apply animated threat classes to attack paths
+        attackPaths.forEach(function (path, idx) {
+          setTimeout(function () {
+            if (!isAttackActive) return;
+            path.setAttribute('class', 'edge-threat');
+            const targetNodeId = attackSequenceNodes[idx + 1];
+            const nodeEl = document.getElementById('node-' + targetNodeId);
+            if (nodeEl) nodeEl.classList.add('threat-active');
+            updateInspector(targetNodeId);
+          }, idx * 900);
+        });
+      }
+
+      function stopAttackSimulation() {
+        isAttackActive = false;
+        if (toggleAttackBtn) {
+          toggleAttackBtn.classList.remove('active');
+          toggleAttackBtn.querySelector('span').textContent = 'Simulate Attack Path';
+        }
+        attackPaths.forEach(function (path) {
+          path.removeAttribute('class');
+        });
+        document.querySelectorAll('.node-group').forEach(function (node) {
+          node.classList.remove('threat-active');
+        });
+      }
+
+      function toggleChokePoint() {
+        const isVisible = chokeGroup.style.opacity === '1';
+        if (isVisible) {
+          chokeGroup.style.opacity = '0';
+          toggleDefenseBtn.classList.remove('active');
+          // Re-enable normal path if attack active
+          if (isAttackActive) {
+            attackPaths[1].setAttribute('class', 'edge-threat');
+          }
+        } else {
+          chokeGroup.style.opacity = '1';
+          toggleDefenseBtn.classList.add('active');
+          // Highlight that Hop 2 is severed
+          attackPaths[1].setAttribute('class', 'edge-defense-blocked');
+          updateInspector('k8s');
+          inspGuidance.textContent = 'DEFENSE CHOKE POINT ACTIVATED: By stripping Kubernetes IAM service account privileges and restricting lateral egress, the attack chain is severed before reaching Redis or Customer DB.';
+        }
+      }
+
+      function resetGraph() {
+        stopAttackSimulation();
+        if (chokeGroup) chokeGroup.style.opacity = '0';
+        if (toggleDefenseBtn) toggleDefenseBtn.classList.remove('active');
+        updateInspector('actor');
+      }
+
+      if (toggleAttackBtn) toggleAttackBtn.addEventListener('click', startAttackSimulation);
+      if (toggleDefenseBtn) toggleDefenseBtn.addEventListener('click', toggleChokePoint);
+      if (resetBtn) resetBtn.addEventListener('click', resetGraph);
+
+    })();
+  </script>
+</body>
+</html>
